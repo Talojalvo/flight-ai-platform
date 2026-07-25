@@ -1,7 +1,10 @@
 import os
 import sys
 
+DEFAULT_PROVIDER = "gemini"
+
 PROVIDER_API_KEY_ENV_VARS = {
+    "gemini": "GOOGLE_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
 }
@@ -14,8 +17,26 @@ def get_chat_model():
     provider client can fail (missing/invalid API key), and that failure must
     surface as a single agent execution error, not crash app startup.
     """
-    provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+    provider = os.getenv("LLM_PROVIDER", DEFAULT_PROVIDER).lower()
     model_name = os.getenv("LLM_MODEL")
+
+    key_env_var = PROVIDER_API_KEY_ENV_VARS.get(provider)
+    if key_env_var is None:
+        raise ValueError(f"Unsupported LLM_PROVIDER '{provider}'")
+    if not os.getenv(key_env_var):
+        raise ValueError(
+            f"{key_env_var} is not set. Add it to backend/.env to use LLM_PROVIDER='{provider}'."
+        )
+
+    if provider == "gemini":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        # gemini-2.5-flash was deprecated for new API keys; gemini-3.5-flash
+        # is the current GA (non-preview) flash-tier model with free-tier
+        # quota and structured-output support as of this writing. Override
+        # via GEMINI_MODEL if this drifts again.
+        return ChatGoogleGenerativeAI(
+            model=os.getenv("GEMINI_MODEL") or model_name or "gemini-3.5-flash", temperature=0
+        )
 
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
@@ -35,7 +56,7 @@ def validate_llm_config() -> None:
     fallback mode when the LLM isn't configured, so a missing key should not
     prevent the app from starting.
     """
-    provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+    provider = os.getenv("LLM_PROVIDER", DEFAULT_PROVIDER).lower()
     key_env_var = PROVIDER_API_KEY_ENV_VARS.get(provider)
 
     if key_env_var is None:
