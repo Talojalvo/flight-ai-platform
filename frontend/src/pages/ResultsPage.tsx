@@ -7,6 +7,7 @@ import { HotelsList } from '../features/results/HotelsList'
 import { TripSummaryBar } from '../features/results/TripSummaryBar'
 import { useTripSelection } from '../features/results/useTripSelection'
 import { isOutboundSelected, isReturnSelected } from '../features/results/tripSelection'
+import { PackageView } from '../features/results/PackageView'
 
 const FADE_UP = {
   initial: { opacity: 0, y: 24 },
@@ -27,6 +28,14 @@ export function ResultsPage() {
 
   if (!result) {
     return null
+  }
+
+  // A recommended package is the primary results view whenever the backend
+  // produced one. It's only ever null when no hotel was requested, or in the
+  // rare case the candidate lists came back empty — both fall back to the
+  // original full-list flow below.
+  if (result.package) {
+    return <PackageView result={result} pkg={result.package} />
   }
 
   const showReturn = isOutboundSelected(selection)

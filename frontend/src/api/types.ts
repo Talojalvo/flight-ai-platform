@@ -65,6 +65,20 @@ export interface RecommendationEntry {
   rank: number
 }
 
+export type PackageSource = 'llm' | 'fallback'
+
+export interface PackageSelection {
+  outbound_flight_id: string
+  return_flight_id: string
+  hotel_id: string
+  summary: string
+  reasoning: string
+  advantages: string[]
+  tradeoffs: string[]
+  recommendation: string
+  source: PackageSource
+}
+
 export interface TripPlanResult {
   flights: {
     outbound: FlightLegOption[]
@@ -78,4 +92,5 @@ export interface TripPlanResult {
     }
     hotels: RecommendationEntry[]
   }
+  package: PackageSelection | null
 }

@@ -264,7 +264,8 @@ button {
 
 /* Results page */
 
-.results-page {
+.results-page,
+.package-view {
   max-width: 720px;
   margin: 0 auto;
   padding: 2rem 1.25rem 4rem;
@@ -450,6 +451,258 @@ button {
 
   .hotel-card-body {
     padding: 0.7rem 1rem 0.9rem;
+  }
+}
+
+/* Recommended package view */
+
+.package-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.package-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.package-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  white-space: nowrap;
+}
+
+.package-badge-ai {
+  color: #ffb454;
+  border-color: rgba(255, 180, 84, 0.4);
+  background: rgba(255, 180, 84, 0.08);
+}
+
+.package-badge-fallback {
+  color: rgba(244, 241, 232, 0.75);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.package-badge-customized {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.package-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.package-item-card {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.package-item-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.package-item-card-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.65;
+}
+
+.package-item-card > .flight-card,
+.package-item-card > .hotel-card {
+  padding: 0;
+}
+
+.package-changed-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  background: rgba(96, 165, 250, 0.08);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+}
+
+.package-change-button {
+  align-self: flex-start;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.package-change-button:hover {
+  border-color: #ffb454;
+  color: #ffb454;
+}
+
+.package-explanation {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.package-explanation h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.package-explanation h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.package-explanation-subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.package-explanation-summary {
+  margin: 0;
+  font-weight: 600;
+}
+
+.package-explanation p {
+  margin: 0;
+  font-size: 0.92rem;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+.package-explanation-list ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.88rem;
+  opacity: 0.85;
+}
+
+.package-explanation-recommendation {
+  font-weight: 600;
+  color: #ffb454;
+}
+
+.package-restore-button {
+  align-self: center;
+}
+
+/* Selection modal (used by "Change outbound/return flight" and "Change hotel") */
+
+.selection-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 6, 10, 0.7);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  z-index: 1000;
+}
+
+.selection-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: min(85vh, 720px);
+  display: flex;
+  flex-direction: column;
+  background: #14161f;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.selection-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.selection-modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.selection-modal-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0.15rem 0.4rem;
+}
+
+.selection-modal-close:hover {
+  opacity: 1;
+}
+
+.selection-modal-body {
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.selection-modal-footer {
+  padding: 0.9rem 1.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.selection-modal-footer .secondary-button {
+  flex: 1;
+  margin-top: 0;
+}
+
+@media (max-width: 480px) {
+  .selection-modal {
+    max-height: 90vh;
+  }
+
+  .package-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
