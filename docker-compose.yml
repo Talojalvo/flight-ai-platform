@@ -1,0 +1,60 @@
+services:
+  flight-agent:
+    build:
+      context: ./services/flight-agent
+    env_file:
+      - ./services/flight-agent/.env
+    environment:
+      PORT: "8001"
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  hotel-agent:
+    build:
+      context: ./services/hotel-agent
+    env_file:
+      - ./services/hotel-agent/.env
+    environment:
+      PORT: "8002"
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  main-backend:
+    build:
+      context: ./backend
+    environment:
+      PORT: "8000"
+      FLIGHT_AGENT_URL: http://flight-agent:8001
+      HOTEL_AGENT_URL: http://hotel-agent:8002
+    ports:
+      - "8000:8000"
+    depends_on:
+      flight-agent:
+        condition: service_healthy
+      hotel-agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - main-backend
