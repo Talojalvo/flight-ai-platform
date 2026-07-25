@@ -48,6 +48,10 @@ jobs:
       - name: Import check
         run: python -c "import main"
 
+      - name: Run tests
+        if: matrix.service.name == 'backend'
+        run: python -m pytest -q
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest

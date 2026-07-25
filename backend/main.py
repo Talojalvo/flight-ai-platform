@@ -7,9 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
+from agents.llm_client import validate_llm_config
 from models import TripRequest
 from orchestrator import OrchestratorAgent
 from registry.agent_registry import registry, AgentType, AgentDisabledError
+
+validate_llm_config()
 
 app = FastAPI()
 
@@ -26,7 +29,8 @@ orchestrator = OrchestratorAgent()
 def _register_agents():
     registry.register(
         "orchestrator", "OrchestratorAgent", AgentType.INTERNAL,
-        "Coordinates the flight and hotel search agents and runs the recommendation agents over their results"
+        "Coordinates the flight and hotel search agents and runs the recommendation and "
+        "package-selection agents over their results"
     )
     registry.register(
         "flight-agent", "FlightAgent", AgentType.EXTERNAL,
@@ -46,7 +50,14 @@ def _register_agents():
     )
     registry.register(
         "hotel-recommendation-agent", "HotelRecommendationAgent", AgentType.INTERNAL,
-        "Ranks hotel search results by guest rating and value"
+        "Ranks hotel search results by guest rating and price"
+    )
+    registry.register(
+        "package-selection-agent", "PackageSelectionAgent", AgentType.INTERNAL,
+        "Uses an LLM to pick the best overall outbound flight, return flight, and hotel "
+        "combination from the top-5 ranked candidates in each category; falls back to the "
+        "top-ranked pick per category if the LLM is unavailable, disabled, or returns an "
+        "invalid selection"
     )
 
 

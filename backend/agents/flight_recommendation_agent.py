@@ -5,9 +5,12 @@ class FlightRecommendationAgent:
     OUTBOUND_TARGET_MIN = 8 * 60
     RETURN_TARGET_MIN = 22 * 60
 
+    # Direct is a de facto veto: its max-possible loss (100) still beats the
+    # best a connecting flight can score from time+price alone (15+5=20).
+    # Among flights with the same stop count, time outweighs price 3:1.
     W_DIRECT = 100
-    W_TIME = 10
-    W_PRICE = 1
+    W_TIME = 15
+    W_PRICE = 5
 
     def execute(self, flights: dict) -> dict:
         return {
