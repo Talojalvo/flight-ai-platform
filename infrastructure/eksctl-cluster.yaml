@@ -1,0 +1,44 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: flight-ai-platform
+  region: eu-central-1
+  version: "1.36"
+
+# Dedicated VPC with public + private subnets across 3 AZs (eksctl default
+# layout for the region). Nodes run in the private subnets; a NAT gateway
+# per AZ gives them outbound access (e.g. to pull images from ECR).
+vpc:
+  nat:
+    gateway: Single
+
+iam:
+  withOIDC: true
+
+managedNodeGroups:
+  # t3.micro, not t3.medium: this account has AWS's Free Tier usage
+  # restriction enabled, which hard-blocks launching any non-free-tier
+  # instance type (ASG retries forever with InvalidParameterCombination).
+  - name: standard-workers
+    instanceType: t3.micro
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 2
+    volumeSize: 20
+    privateNetworking: true
+    iam:
+      withAddonPolicies:
+        ebs: true
+        efs: false
+        imageBuilder: true
+        autoScaler: true
+
+cloudWatch:
+  clusterLogging:
+    enableTypes:
+      - api
+      - audit
+      - authenticator
+      - controllerManager
+      - scheduler
