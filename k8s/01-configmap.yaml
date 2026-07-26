@@ -1,0 +1,27 @@
+# Non-secret configuration shared by the services that need it. Mirrors the
+# env vars docker-compose.yml sets directly on main-backend, externalized
+# here since Kubernetes has no compose-style per-service `environment:` block
+# baked into an image.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flight-ai-config
+  namespace: flight-ai-platform
+data:
+  # In-cluster DNS names for the two backing services (Service metadata.name
+  # is the hostname). backend/clients/*_client.py default to localhost:PORT,
+  # which only works when everything is one process/container — these
+  # overrides are required for the backend Pod to reach the other two Pods.
+  FLIGHT_AGENT_URL: "http://flight-agent:8001"
+  HOTEL_AGENT_URL: "http://hotel-agent:8002"
+
+  # PackageSelectionAgent provider selection (backend/agents/llm_client.py).
+  # Both already match the code's own defaults; set explicitly here so the
+  # deployed configuration is self-documenting rather than relying on an
+  # implicit fallback.
+  LLM_PROVIDER: "gemini"
+  GEMINI_MODEL: "gemini-3.5-flash"
+
+  # Matches the Ingress host below (07-ingress.yaml) so the browser's
+  # cross-origin request from the frontend to the backend is accepted.
+  CORS_ALLOWED_ORIGINS: "http://flight-ai.local"

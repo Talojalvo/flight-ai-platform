@@ -1,0 +1,42 @@
+# frontend/nginx.conf only serves static files (no reverse-proxy config), so
+# the frontend calls the backend via an absolute URL baked in at Docker
+# build time (VITE_API_BASE_URL). This Ingress exposes both under one host
+# so that URL can point at a stable, real address:
+#   http://flight-ai.local/       -> frontend
+#   http://flight-ai.local/api/*  -> backend (with /api stripped)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flight-ai-ingress
+  namespace: flight-ai-platform
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: flight-ai.local
+      http:
+        paths:
+          # Matched first: /api, /api/, /api/plan-trip, etc. Capture group 2
+          # is everything after /api, substituted into rewrite-target above
+          # so the backend sees /plan-trip, not /api/plan-trip.
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          # Matches everything else. Group 1 is always empty; group 2 is the
+          # full request path, so it round-trips unchanged through the
+          # shared rewrite-target above (unlike a plain Prefix "/" path,
+          # which has no capture groups and would rewrite every request to
+          # "/", breaking nested asset paths like /assets/index-*.js).
+          - path: /()(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
