@@ -142,10 +142,17 @@ jobs:
             context: frontend
             # Repo is genuinely named "fronted" (typo) in ECR, not "frontend".
             ecr-repo: fronted
-            # Baked in at build time (frontend/Dockerfile ARG, not read at
-            # runtime) - must match the ingress-nginx NLB fronting the app.
+            # Relative, not an absolute http://<nlb-hostname> URL: the
+            # ingress routes /api on the same origin as the frontend, so a
+            # relative path follows whatever scheme the page was actually
+            # loaded with. An absolute http:// URL broke iOS Safari, which
+            # defaults to https:// for typed/bookmarked hosts - the page
+            # loaded fine over https (self-signed cert on :443, no other
+            # TLS configured), but fetch() calls to a hardcoded http://
+            # API URL were then mixed content and silently blocked
+            # ("Load failed", no further detail shown).
             build-args: |
-              VITE_API_BASE_URL=http://a2de1fcca75884601b76db60b426b8b7-78c45564a9a23352.elb.eu-central-1.amazonaws.com/api
+              VITE_API_BASE_URL=/api
     steps:
       - uses: actions/checkout@v4
 
