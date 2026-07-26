@@ -1,0 +1,42 @@
+# EKS (eu-central-1) deployment. Differs from the Minikube base in three
+# ways: images come from ECR instead of the local Docker daemon, there's no
+# custom domain yet so the Ingress must match any Host (not flight-ai.local),
+# and CORS_ALLOWED_ORIGINS has to match whatever origin the browser actually
+# sees, i.e. the ingress-nginx NLB's hostname.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+
+images:
+  - name: flight-agent:local
+    newName: 959015415188.dkr.ecr.eu-central-1.amazonaws.com/flight-agent
+    newTag: latest
+  - name: hotel-agent:local
+    newName: 959015415188.dkr.ecr.eu-central-1.amazonaws.com/hotel-agent
+    newTag: latest
+  - name: backend:local
+    newName: 959015415188.dkr.ecr.eu-central-1.amazonaws.com/backend
+    newTag: latest
+  - name: frontend:local
+    newName: 959015415188.dkr.ecr.eu-central-1.amazonaws.com/fronted
+    newTag: latest
+
+patches:
+  # Drop the flight-ai.local host restriction so the Ingress matches
+  # whatever hostname actually reaches it (the NLB's own DNS name, until a
+  # real domain is pointed at it).
+  - target:
+      kind: Ingress
+      name: flight-ai-ingress
+    patch: |-
+      - op: remove
+        path: /spec/rules/0/host
+
+  - target:
+      kind: ConfigMap
+      name: flight-ai-config
+    patch: |-
+      - op: replace
+        path: /data/CORS_ALLOWED_ORIGINS
+        value: "http://a2de1fcca75884601b76db60b426b8b7-78c45564a9a23352.elb.eu-central-1.amazonaws.com"

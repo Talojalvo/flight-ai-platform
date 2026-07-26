@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -8,10 +8,17 @@ on:
 
 permissions:
   contents: read
+  id-token: write # required for the OIDC AssumeRoleWithWebIdentity calls in push-images/deploy
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # never cancel a deploy mid-flight; only PR/branch validation runs are safe to cancel
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_REGISTRY: 959015415188.dkr.ecr.eu-central-1.amazonaws.com
+  EKS_CLUSTER: flight-ai-platform
 
 jobs:
   python-services:
@@ -105,3 +112,99 @@ jobs:
           tags: flight-ai-platform/${{ matrix.image.name }}:ci
           cache-from: type=gha,scope=${{ matrix.image.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+
+  # Everything below here only runs for pushes to main, once python-services,
+  # frontend, and docker-build have all passed. Images are tagged with the
+  # commit SHA (never :latest) so every deploy is traceable to an exact
+  # commit and rollbacks are just "deploy the previous SHA".
+  push-images:
+    name: Push ${{ matrix.image.name }} to ECR
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: backend
+            context: backend
+            ecr-repo: backend
+          - name: flight-agent
+            context: services/flight-agent
+            ecr-repo: flight-agent
+          - name: hotel-agent
+            context: services/hotel-agent
+            ecr-repo: hotel-agent
+          - name: frontend
+            context: frontend
+            # Repo is genuinely named "fronted" (typo) in ECR, not "frontend".
+            ecr-repo: fronted
+            # Baked in at build time (frontend/Dockerfile ARG, not read at
+            # runtime) - must match the ingress-nginx NLB fronting the app.
+            build-args: |
+              VITE_API_BASE_URL=http://a2de1fcca75884601b76db60b426b8b7-78c45564a9a23352.elb.eu-central-1.amazonaws.com/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.image.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          push: true
+          tags: ${{ env.ECR_REGISTRY }}/${{ matrix.image.ecr-repo }}:${{ github.sha }}
+          build-args: ${{ matrix.image.build-args }}
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+
+  deploy:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+    needs: [push-images]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: azure/setup-kubectl@v4
+
+      - uses: imranismail/setup-kustomize@v2
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER }} --region ${{ env.AWS_REGION }}
+
+      - name: Pin image tags to this commit's SHA
+        working-directory: k8s/overlays/aws
+        run: |
+          kustomize edit set image \
+            flight-agent:local=${{ env.ECR_REGISTRY }}/flight-agent:${{ github.sha }} \
+            hotel-agent:local=${{ env.ECR_REGISTRY }}/hotel-agent:${{ github.sha }} \
+            backend:local=${{ env.ECR_REGISTRY }}/backend:${{ github.sha }} \
+            frontend:local=${{ env.ECR_REGISTRY }}/fronted:${{ github.sha }}
+
+      - name: Apply manifests
+        run: kubectl apply -k k8s/overlays/aws
+
+      - name: Wait for rollout
+        run: |
+          for d in backend flight-agent hotel-agent frontend; do
+            kubectl rollout status deployment/$d -n flight-ai-platform --timeout=180s
+          done

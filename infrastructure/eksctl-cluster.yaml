@@ -20,11 +20,18 @@ managedNodeGroups:
   # t3.micro, not t3.medium: this account has AWS's Free Tier usage
   # restriction enabled, which hard-blocks launching any non-free-tier
   # instance type (ASG retries forever with InvalidParameterCombination).
+  #
+  # 4 desired (not 2): t3.micro's ENI/IP allocation caps it at 4 pods per
+  # node regardless of CPU/memory headroom. aws-node + kube-proxy alone take
+  # 2 of those 4 slots on every node, leaving only 2 "floating" slots/node
+  # for coredns (x2), the ingress-nginx controller, and the 4 app pods (7
+  # floating pods total) - 2 nodes can't fit that even though there's spare
+  # CPU/memory.
   - name: standard-workers
     instanceType: t3.micro
-    desiredCapacity: 2
-    minSize: 2
-    maxSize: 2
+    desiredCapacity: 4
+    minSize: 3
+    maxSize: 5
     volumeSize: 20
     privateNetworking: true
     iam:
